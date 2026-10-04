@@ -1,0 +1,45 @@
+name: Song of the Day
+
+on:
+  schedule:
+    # PUBLIC repo: Actions minutes are free and unlimited, so every 10 min is fine.
+    - cron: "3-59/10 * * * *"
+    # PRIVATE repo on GitHub Free: you only get 2,000 min/month across ALL your repos.
+    # Each run bills as a full minute, so use every 30 min instead (about 1,440/month):
+    # - cron: "7,37 * * * *"
+  workflow_dispatch: {}   # adds a "Run workflow" button for manual testing
+
+permissions:
+  contents: write   # lets the job commit state.json back to the repo
+
+concurrency:
+  group: song-of-the-day
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check playlist and post new songs
+        env:
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          SPOTIFY_REFRESH_TOKEN: ${{ secrets.SPOTIFY_REFRESH_TOKEN }}
+          SPOTIFY_PLAYLIST_ID: ${{ secrets.SPOTIFY_PLAYLIST_ID }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TIMEZONE: America/Los_Angeles
+        run: python3 sotd.py
+
+      - name: Save state
+        if: always()
+        run: |
+          git config user.name "song-of-the-day-bot"
+          git config user.email "song-of-the-day-bot@users.noreply.github.com"
+          git add state.json 2>/dev/null || exit 0
+          git diff --cached --quiet && exit 0
+          git commit -m "Update song of the day state"
+          git pull --rebase --quiet
+          git push --quiet
