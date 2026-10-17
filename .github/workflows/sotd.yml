@@ -1,13 +1,12 @@
 name: Song of the Day
 
 on:
+  # Main trigger: cron-job.org calls GitHub's API every 5 minutes to start this.
+  # Those starts happen within seconds, unlike GitHub's own schedule below.
+  workflow_dispatch: {}
+  # Backup only. GitHub's scheduler often runs hours late, so don't rely on it.
   schedule:
-    # PUBLIC repo: Actions minutes are free and unlimited, so every 10 min is fine.
-    - cron: "3-59/10 * * * *"
-    # PRIVATE repo on GitHub Free: you only get 2,000 min/month across ALL your repos.
-    # Each run bills as a full minute, so use every 30 min instead (about 1,440/month):
-    # - cron: "7,37 * * * *"
-  workflow_dispatch: {}   # adds a "Run workflow" button for manual testing
+    - cron: "17 * * * *"
 
 permissions:
   contents: write   # lets the job commit state.json back to the repo
@@ -22,6 +21,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: main   # always grab the newest state.json, even if this run sat in a queue
 
       - name: Check playlist and post new songs
         env:

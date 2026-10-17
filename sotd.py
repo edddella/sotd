@@ -31,7 +31,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -63,6 +63,11 @@ MESSAGE_TEMPLATE = (
 # If your "Day #" count doesn't match the playlist position (say you started the
 # playlist on day 15), set this to the difference. {number} = position + offset.
 NUMBER_OFFSET = 0
+
+# Songs added before this hour (Pacific, 24h clock) count as the previous day.
+# 4 means anything added between midnight and 3:59am gets yesterday's date.
+# Set to 0 to turn it off.
+DAY_CUTOFF_HOUR = 4
 
 # If a bunch of songs show up at once (you bulk-added or rebuilt the playlist),
 # post at most this many and quietly mark the rest as seen. Stops it from spamming.
@@ -197,6 +202,7 @@ def format_message(entry):
         datetime.fromisoformat(added.replace("Z", "+00:00")).astimezone(TZ)
         if added else datetime.now(TZ)
     )
+    when -= timedelta(hours=DAY_CUTOFF_HOUR)  # 1am on the 5th becomes the 4th
     fields = {
         "title": song.get("name", "Unknown song"),
         "artists": ", ".join(artists) or "Unknown artist",
